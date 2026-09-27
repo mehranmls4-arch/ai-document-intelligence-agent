@@ -1,0 +1,218 @@
+// REFERENCE SCHEMA / ERD ONLY -- NOT WIRED UP AT RUNTIME.
+//
+// This file documents the data model in Prisma's readable schema syntax.
+// The application's actual runtime queries run through Drizzle ORM
+// (lib/db/schema.ts), not this file or @prisma/client -- see
+// docs/database.md for why. The two schemas are kept in sync by hand; if
+// you add a column, update both. If your own environment *can* reach
+// binaries.prisma.sh, this file is valid input to `prisma generate`/`studio`
+// for exploring the data model, but the app does not depend on that working.
+//
+// SQLite is used so the project runs anywhere with zero setup (a hard
+// requirement for a portfolio demo people will actually clone and run).
+// Every field used here is a plain scalar supported by SQLite, so switching
+// `provider` to "postgresql" and pointing DATABASE_URL at a real Postgres
+// instance is a drop-in change — no model changes required.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  EXTRACTING
+  CLASSIFYING
+  VALIDATING
+  NEEDS_REVIEW
+  COMPLETED
+  FAILED
+}
+
+enum DocumentType {
+  INVOICE
+  PURCHASE_ORDER
+  RECEIPT
+  CONTRACT
+  APPLICATION
+  REPORT
+  ONBOARDING_DOCUMENT
+  UNKNOWN
+}
+
+model Document {
+  id                     String   @id @default(cuid())
+  filename               String
+  originalFilename       String
+  fileType               String
+  fileSizeBytes          Int
+  storagePath            String
+
+  documentType           DocumentType @default(UNKNOWN)
+  classificationConfidence Float?
+
+  status                 DocumentStatus @default(UPLOADED)
+  failureReason          String?
+
+  extractedText          String?
+  pageCount              Int?
+  extractionMethod       String?   // "pdf_text" | "ocr"
+  extractionConfidence   Float?
+  extractedAt            DateTime?
+
+  overallConfidence      Float?
+  needsReview            Boolean  @default(false)
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  invoice          Invoice?
+  validationResults ValidationResult[]
+  reviewActions    ReviewAction[]
+  processingRuns   ProcessingRun[]
+  aiAnalysis       AiAnalysis?
+
+  @@index([status])
+  @@index([documentType])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id                    String   @id @default(cuid())
+  documentId            String   @unique
+  document              Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  vendorName            String?
+  vendorAddress         String?
+  invoiceNumber         String?
+  invoiceDate           String?
+  dueDate               String?
+  currency              String?
+  purchaseOrderNumber   String?
+
+  subtotal              Float?
+  tax                   Float?
+  discount              Float?
+  total                 Float?
+  paymentTerms          String?
+
+  // Per-field confidence, stored as JSON: { "invoiceNumber": 0.98, ... }
+  fieldConfidenceJson   String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  lineItems             InvoiceLineItem[]
+
+  @@index([invoiceNumber])
+  @@index([vendorName])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+
+  @@index([invoiceId])
+}
+
+enum ValidationStatus {
+  PASSED
+  WARNING
+  FAILED
+}
+
+model ValidationResult {
+  id         String           @id @default(cuid())
+  documentId String
+  document   Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  rule       String
+  status     ValidationStatus
+  message    String
+
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
+enum ReviewActionType {
+  FIELD_CORRECTION
+  APPROVE
+  REJECT
+  SEND_BACK
+}
+
+model ReviewAction {
+  id             String           @id @default(cuid())
+  documentId     String
+  document       Document         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  fieldName      String?
+  originalValue  String?
+  correctedValue String?
+  action         ReviewActionType
+  reviewer       String   @default("demo-reviewer")
+  notes          String?
+
+  createdAt      DateTime @default(now())
+
+  @@index([documentId])
+}
+
+enum ProcessingStage {
+  UPLOAD
+  EXTRACTION
+  CLASSIFICATION
+  STRUCTURED_EXTRACTION
+  VALIDATION
+  AI_ANALYSIS
+  REVIEW
+  COMPLETED
+}
+
+enum ProcessingStatus {
+  STARTED
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+model ProcessingRun {
+  id            String            @id @default(cuid())
+  documentId    String
+  document      Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  stage         ProcessingStage
+  status        ProcessingStatus
+  startedAt     DateTime          @default(now())
+  completedAt   DateTime?
+  durationMs    Int?
+  errorMessage  String?
+
+  @@index([documentId])
+}
+
+model AiAnalysis {
+  id                String   @id @default(cuid())
+  documentId        String   @unique
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  summary           String
+  keyObservationsJson String  // JSON string array
+  anomaliesJson       String  // JSON array of { type, severity, message, fact: boolean }
+  provider          String
+  model             String
+
+  createdAt         DateTime @default(now())
+}

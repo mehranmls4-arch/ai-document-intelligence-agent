@@ -1,0 +1,36 @@
+{
+  "name": "ai-document-intelligence-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered document intelligence and workflow automation system: unstructured business documents to validated structured data, with confidence scoring, anomaly detection, and human-in-the-loop review.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "samples:generate": "tsx scripts/generate-samples.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.3",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^20.14.15",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "drizzle-kit": "^0.31.11",
+    "pdfkit": "^0.15.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.1"
+  }
+}
