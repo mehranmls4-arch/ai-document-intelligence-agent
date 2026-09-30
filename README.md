@@ -1,4 +1,6 @@
-# AI Document Processing & Intelligence Agent
+# AI Document Intelligence Agent
+
+**Upload documents → extract data → validate → analyze → human review → export.**
 
 > An AI-powered document intelligence pipeline that transforms unstructured business documents into validated structured data, automated analysis, and human-reviewed workflows.
 
@@ -20,15 +22,16 @@ An automated pipeline extracts text from a document (via its embedded text layer
 
 ```text
 Document
-→ Extraction/OCR
+→ File Security Validation
+→ Text Extraction / OCR
 → Classification
 → Structured Extraction
 → Validation
-→ Confidence Scoring
 → AI Analysis
+→ Confidence Routing
 → Human Review
 → Database
-→ API/Export
+→ Export / API
 ```
 
 ## Key Features
@@ -52,16 +55,16 @@ Only what's actually implemented and tested:
 
 ```mermaid
 flowchart LR
-    A[Document Upload] --> B[Extraction/OCR]
-    B --> C[AI Classification]
-    C --> D[Structured Extraction]
-    D --> E[Validation Engine]
-    E --> F[Confidence Scoring]
-    F --> G{Needs Review?}
-    G -->|Yes| H[Review Queue]
-    G -->|No| I[AI Analysis]
-    H --> I
-    I --> J[(SQLite via Drizzle)]
+    A[Document Upload] --> B[File Security Validation]
+    B --> C[Text Extraction / OCR]
+    C --> D[AI Classification]
+    D --> E[Structured Extraction]
+    E --> F[Validation Engine]
+    F --> G[AI Analysis]
+    G --> H[Confidence Routing]
+    H -->|Below threshold or validation failed| I[Human Review]
+    H -->|Passes| J[(SQLite via Drizzle)]
+    I --> J
     J --> K[API / Export]
 ```
 
